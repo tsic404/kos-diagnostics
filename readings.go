@@ -30,6 +30,13 @@ type Product struct {
 	Now func() time.Time
 }
 
+// NewReader builds the reader a host registers in its page router under
+// Identifier. The host injects the cluster client, the extension state and the
+// read clock; the product keeps no state of its own (DIAG-C-1).
+func NewReader(dynamic dynamic.Interface, environment diagnostic.Environment, now func() time.Time) *Product {
+	return &Product{Dynamic: dynamic, Environment: environment, Now: now}
+}
+
 // Read resolves one declared item from the source it names. It is the reader
 // the page shell calls for every item of the diagnostics page.
 func (p *Product) Read(ctx context.Context, session identity.Session, item extension.PageItem) (pages.Reading, *controlplane.Error) {

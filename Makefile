@@ -3,7 +3,7 @@
 SHELL := /bin/sh
 GO ?= go
 
-.PHONY: all lint fmt-check vet test acceptance clean
+.PHONY: all lint fmt-check vet test acceptance pack clean
 
 all: lint test
 
@@ -27,6 +27,11 @@ test:
 
 acceptance:
 	$(GO) test ./tests/... -count=1 -v
+
+# pack writes the extension package and its digest. The product declares no UI
+# asset, so a missing assets/ directory yields the two-entry package.
+pack:
+	$(GO) run ./cmd/kos-diagnostics-pack -out dist/kos-diagnostics.tar
 
 clean:
 	$(GO) clean -testcache
