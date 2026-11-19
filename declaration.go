@@ -3,7 +3,9 @@ package diagnostics
 import (
 	"net/http"
 
+	"github.com/tsic404/kosd/api"
 	"github.com/tsic404/kosd/pkg/extension"
+	"github.com/tsic404/kosd/pkg/write"
 )
 
 // Identifier is the product's extension identity across versions (KOSD-C-17).
@@ -11,6 +13,10 @@ const Identifier = "kos-diagnostics"
 
 // Version is the product version the declaration carries.
 const Version = "1.0.0"
+
+// FrameworkVersion is the framework API version range the declaration targets
+// (KOSD-C-18). The kernel serves 1.1 (KOSD-C-16).
+const FrameworkVersion = ">=1.1 <2.0"
 
 // PageDiagnostics is the diagnostics page (DIAG-C-1).
 const PageDiagnostics = "diagnostics"
@@ -45,12 +51,47 @@ const (
 // diagnostics page and its export entry.
 func Declaration() extension.Declaration {
 	return extension.Declaration{
-		Identifier: Identifier,
-		Version:    Version,
+		Identifier:       Identifier,
+		Version:          Version,
+		FrameworkVersion: FrameworkVersion,
 		Contributions: extension.Contributions{
 			Pages: []extension.Page{Page()},
 		},
+		Permissions: Permissions(),
 	}
+}
+
+// Permissions declares what the page reads and the control-plane role it needs
+// (KOSD-C-18). The page writes nothing: it presents evidence and exports a
+// snapshot, so no entry names a write scope or an object writer (DIAG-C-1).
+func Permissions() []extension.Permission {
+	return []extension.Permission{{
+		Contribution: PageDiagnostics,
+		ReadScope: extension.ReadScope{
+			// The page reads the kernel objects it names and the native kinds the
+			// evidence chain walks behind them (KOSD-C-26).
+			Groups: []string{api.Group, "", "apps", "batch", "networking.k8s.io"},
+			Kinds: []extension.GroupKind{
+				{Group: api.Group, Kind: "Application"},
+				{Group: api.Group, Kind: "Endpoint"},
+				{Group: api.Group, Kind: "Volume"},
+				{Kind: "Event"},
+				{Kind: "Node"},
+				{Kind: "Pod"},
+				{Kind: "Service"},
+				{Group: "apps", Kind: "DaemonSet"},
+				{Group: "apps", Kind: "Deployment"},
+				{Group: "apps", Kind: "ReplicaSet"},
+				{Group: "apps", Kind: "StatefulSet"},
+				{Group: "batch", Kind: "CronJob"},
+				{Group: "batch", Kind: "Job"},
+				{Group: "networking.k8s.io", Kind: "Ingress"},
+			},
+		},
+		// The page is read-only, so the lowest signed-in role is enough; the
+		// reader still trims every object to the caller's visibility (KOSD-C-59).
+		RequiredRole: string(write.RoleGuest),
+	}}
 }
 
 // Page returns the declared diagnostics page. The export entry is the page's
